@@ -1,2 +1,0 @@
-# DBSCAN
-DBSCAN Clustering Method
