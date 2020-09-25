@@ -1,19 +1,17 @@
 ﻿IMPORT ML_Core;
 IMPORT ML_Core.Analysis;
 IMPORT ML_Core.Types AS Types;
-IMPORT DBSCAN AS DBSCAN;
+IMPORT $.^ AS DBSCAN;
 IMPORT $.datasets.adap AS compound_data;
 IMPORT $.datasets;
 
 rs :={Types.t_FieldReal x, Types.t_FieldReal y};
 rs1 :={Real x};
-actual := $.datasets.adap_actual;//labelled datset to check accuracy using ARI
-dim := 2;// dimension of the dataset
+actual := $.datasets.adap_actual;
+dimension := 2;
 Records := compound_data.ds;
 layout := compound_data.layout;
 
-
-//function to standardize the dtatset
 STREAMED DATASET(layout) standardize( STREAMED DATASET(layout) dsIn,UNSIGNED4 num) := EMBED(C++: activity) 
 		#include<iostream>
     #include<bits/stdc++.h>
@@ -150,14 +148,13 @@ STREAMED DATASET(layout) standardize( STREAMED DATASET(layout) dsIn,UNSIGNED4 nu
 ENDEMBED;
 
 
-ds := standardize(Records, dim);
+ds := standardize(Records, dimension);
 
 
 
 ML_Core.AppendSeqID(ds,id,dsID);
 ML_Core.ToField(dsID,dsNF);
 
-//possible values for threshold
 poss := dataset([{0.1},{0.15},{0.2},{0.25},{0.30},{0.35},{0.4},{0.45},{0.5},{0.55},{0.6},{0.65},{0.7},{0.75},{0.8},{0.85},{0.9},{0.95}] ,rs1);
 
 
@@ -168,10 +165,10 @@ num := max(mod,mod.label);
 self.x := if(num > 1, ave(test,value), 0);
 END;
 
-//list of silhouette scores for various thresholds
-Silhouettes := project(poss,T1(LEFT,counter));
 
-//function to find the largest Silhouette score
+MySet1 := project(poss,T1(LEFT,counter));
+
+output(Myset1);
 unsigned find( STREAMED DATASET(rs1) ds) := EMBED(C++)
 
     #include<iostream>
@@ -201,7 +198,7 @@ unsigned find( STREAMED DATASET(rs1) ds) := EMBED(C++)
 		return maxElementIndex + 1;
 endembed;
 
-ind := find(Silhouettes);
+ind := find(MySet1);
 thre := poss[ind].x ;
 
 
@@ -217,4 +214,4 @@ OUTPUT(NumberOfClusters, NAMED('NumberOfClusters'));
 OUTPUT(NumberOfOutliers, NAMED('NumberOfOutliers'));
 output(test, NAMED('Silhouette'));
 output(test1, , NAMED('ARI'));
-
+output(mod);
