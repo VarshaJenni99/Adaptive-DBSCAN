@@ -1,61 +1,72 @@
 ﻿IMPORT ML_Core;
 IMPORT ML_Core.Analysis;
+IMPORT ML_Core.Types AS Types;
 IMPORT $.^ AS DBSCAN;
-IMPORT $.datasets.adap AS compound_data;
+IMPORT $.datasets.iris AS compound_data;
 IMPORT $.datasets;
-// Test to check the Num_clusters function
 
+rs :={Types.t_FieldReal x, Types.t_FieldReal y};
+rs1 :={Real x};
+actual := $.datasets.iris_actual;
+dimension := 4;
 Records := compound_data.ds;
 layout := compound_data.layout;
+thre := 0.15;
 
-
-
-unsigned clusters( STREAMED DATASET(layout) ds, unsigned dim) := EMBED(C++)
-
-    #include<iostream>
+STREAMED DATASET(layout) standardize( STREAMED DATASET(layout) dsIn,UNSIGNED4 num) := EMBED(C++: activity) 
+		#include<iostream>
     #include<bits/stdc++.h>
 
     using namespace std;
 		
-		bool pdf(vector<vector<double> > &dataset,vector<double> landmark, double s2, int min_pts){
-
-  	uint32_t d = 0;
-		vector<int> kernels;
-  	for(uint64_t  i = 0; i < dataset.size(); i++){
-  		double a = 0.0;
-  		for(uint64_t curr_var = 0; curr_var < dataset[0].size(); curr_var++){	
-  			 
-				 a += pow(-(dataset[i][curr_var] - landmark[curr_var]),2);
-  		}
-			a = exp(a/(2*s2)) *(1/sqrt(s2 * 2 *3.14));
-			
-			if(a >= 0.9)
-			kernels.push_back(1);
-			else
-			kernels.push_back(0);
-
-}  
-		
-		if(accumulate(kernels.begin(), kernels.end(), 0) >= min_pts)
+		void average(vector<vector<double> > ds, double avg[], uint32_t dim)
 		{
+				double sum;
+				for(uint32_t j = 0;j < dim; j++)
+				{
+				sum = 0;
+					for(uint32_t i = 0; i < ds.size(); i++)
+					{
+							sum += ds[i][j];
+					}
+					
+					avg[j] = sum/ds.size();
+				}
 		
-		vector<vector<double> >::iterator it; 
-  
-    it = dataset.begin();
-  	
-		for(uint32_t i = 0; i < kernels.size(); i++)
+		}
+		
+		void deviation(vector<vector<double> > ds, double dev[], uint32_t dim)
 		{
-				 if(kernels[i] == 1)
-				 dataset.erase(it);
-				 
-				 it++;
+				double sum,mean,std;
+				for(uint32_t j = 0;j < dim; j++)
+				{
+				sum = 0;
+				std = 0;
+					for(uint32_t i = 0; i < ds.size(); i++)
+					{
+							sum += ds[i][j];
+					}
+					
+					mean = sum/ds.size();
+					
+					for(uint32_t i = 0; i < ds.size(); i++)
+					{
+						std += pow(ds[i][j]-mean, 2);
+					}
+					
+					std = sqrt(std/ds.size());
+					dev[j] = std;
+				}
 		}
-		return true;
-		}
-		else return false;
-}
+		
 		#body
-		vector<vector<double> > dataset;
+	
+	class ResultStream : public RtlCInterface, implements IRowStream {
+    public:
+        ResultStream(IEngineRowAllocator *_ra, IRowStream *_ds, uint32_t dim) : ra(_ra), ds(_ds){
+
+     count = 0;
+		 d = dim;
      for(;;)
 		{
 			const byte *next = (const byte *)ds->nextRow();
@@ -75,38 +86,90 @@ unsigned clusters( STREAMED DATASET(layout) ds, unsigned dim) := EMBED(C++)
 			 	rtlReleaseRow(next);	
 			
 				}
-				
-				uint32_t c  = 0;
-	
-	vector<double> sum_x_map, sum_x2_map;
-	for(uint64_t curr_var = 0;curr_var < dataset[0].size(); curr_var++)
-		{
-					sum_x_map.push_back(0.0);
-					sum_x2_map.push_back(0.0);
-					
-					for(uint64_t i = 0; i < dataset.size(); i++){
-							
-							sum_x_map[curr_var] += dataset[i][curr_var];
-							sum_x2_map[curr_var] += dataset[i][curr_var] * dataset[i][curr_var];			
-			}		
-		}
-		
-		//int d = dataset[0].size(); 
-		double s2;
-		for(uint64_t curr_var = 0; curr_var < dataset[0].size(); curr_var++)
-	{
-		double x  = sum_x_map[curr_var]/dataset.size();
-  	double x2 = sum_x2_map[curr_var];
-  	 s2 += x2/dataset.size() - (x*x);
-		}
-		
-		s2 = s2/dataset[0].size();
-		for(uint32_t i = 0; i < dataset.size(); i++)
-		{
-			if((pdf(dataset, dataset[i],s2,39)))
-				c++;
-		}
-		return c;
-endembed;
+				double avg[dim];
+				double std[dim];
 
-output(clusters(Records, 2));
+					average(dataset,avg,dim);
+					deviation(dataset,std, dim);
+
+            for(uint32_t i = 0;i < dataset.size(); i++)
+					{
+						vector<double> temp;
+							double t;
+						for(uint32_t j = 0;j < dim; j++)
+						{			
+							t = (dataset[i][j] - avg[j])/std[j];
+							temp.push_back(t);
+						}
+						results.push_back(temp);
+						temp.clear();
+						
+					}
+					
+        }
+				
+				
+				RTLIMPLEMENT_IINTERFACE
+        virtual const void* nextRow() override {
+				
+				if (count >= results.size())
+            return NULL;
+						
+				RtlDynamicRowBuilder rowBuilder(ra);
+        unsigned len = sizeof(double) * d;
+        byte * row = (byte *)rowBuilder.ensureCapacity(len, NULL);
+					for(uint32_t i  = 0; i < d; i++)
+					{
+					*((double*)row) = results[count][i]; 
+					if(i != d -1)
+					row += sizeof(double);
+					}
+					
+					count++;
+				return rowBuilder.finalizeRowClear(len);
+				}
+				
+				virtual void stop()
+    {
+        //count = (unsigned)-1;
+    }
+				
+								
+				 protected:
+        Linked<IEngineRowAllocator> ra;
+        unsigned count;
+				unsigned d;
+        vector<vector<double> > dataset;
+        vector<vector<double> > results;
+        IRowStream *ds;
+    };
+				
+				return new ResultStream(_resultAllocator, dsin, num);
+
+ENDEMBED;
+
+
+ds := standardize(Records, dimension);
+
+
+
+ML_Core.AppendSeqID(ds,id,dsID);
+ML_Core.ToField(dsID,dsNF);
+
+
+
+
+mod := DBSCAN.DBSCAN(thre).Fit(dsNF);
+output(ds);
+
+
+NumberOfClusters := DBSCAN.DBSCAN().Num_Clusters(mod);
+NumberOfOutliers := DBSCAN.DBSCAN().Num_Outliers(mod);
+test := Analysis.Clustering.SilhouetteScore(dsNF,mod);
+test1 := Analysis.Clustering.ARI(mod, actual);
+
+OUTPUT(NumberOfClusters, NAMED('NumberOfClusters'));
+OUTPUT(NumberOfOutliers, NAMED('NumberOfOutliers'));
+output(test, NAMED('Silhouette'));
+output(test1, , NAMED('ARI'));
+output(mod);

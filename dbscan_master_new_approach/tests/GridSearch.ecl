@@ -2,12 +2,12 @@
 IMPORT ML_Core.Analysis;
 IMPORT ML_Core.Types AS Types;
 IMPORT $.^ AS DBSCAN;
-IMPORT $.datasets.adap AS compound_data;
+IMPORT $.datasets.zelnik AS compound_data;
 IMPORT $.datasets;
 
 rs :={Types.t_FieldReal x, Types.t_FieldReal y};
 rs1 :={Real x};
-actual := $.datasets.adap_actual;
+actual := $.datasets._2d_2c_no4_actual;
 dimension := 2;
 Records := compound_data.ds;
 layout := compound_data.layout;
@@ -156,6 +156,7 @@ ML_Core.AppendSeqID(ds,id,dsID);
 ML_Core.ToField(dsID,dsNF);
 
 poss := dataset([{0.1},{0.15},{0.2},{0.25},{0.30},{0.35},{0.4},{0.45},{0.5},{0.55},{0.6},{0.65},{0.7},{0.75},{0.8},{0.85},{0.9},{0.95}] ,rs1);
+//poss := dataset([{0.1},{0.2},{0.30},{0.4},{0.5},{0.6},{0.7},{0.8},{0.9}] ,rs1);
 
 
 rs1 T1(RS1 L,integer c) := TRANSFORM

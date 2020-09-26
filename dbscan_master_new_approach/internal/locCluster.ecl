@@ -154,42 +154,46 @@ EXPORT locCluster := MODULE
     bool getNeighbors(vector<node*>ds,vector<float> landmark, vector<double> s2, uint32_t min_pts, vector<double>&kernels, double threshold){
 
   	uint32_t d = 0;
-  	for(uint64_t  i = 0; i < ds.size(); i++){
-  		double a = 0.0;
-			if(ds[i]->isModified == true||ds[i]->isVisited == true)
-				continue;
-				double s = 1.0;
-				for(uint32_t i = 0; i < s2.size(); i++)
+			double s = 1.0;
+		for(uint32_t i = 0; i < s2.size(); i++)
 				{
 					s *= s2[i];
 				}
+  	
+			
+				
 				double t = 0.9;
 		while(t >= threshold)
 		{
-			for(uint32_t i = 0; i < kernels.size(); i++)
-			{
-				kernels[i] = 0;
-			}
-  		for(uint64_t curr_var = 0; curr_var < ds[0]->fields.size(); curr_var++){	
+		
+		for(uint32_t i = 0; i < kernels.size(); i++)
+				{
+					kernels[i] = 0;
+				}
+		
+			for(uint64_t  i = 0; i < ds.size(); i++){
+				double a = 0.0;
+				//if(ds[i]->isModified == true||ds[i]->isVisited == true)
+					//continue;
+				
+				for(uint64_t curr_var = 0; curr_var < ds[0]->fields.size(); curr_var++){	
 			
-			
-  			 
-				 a += pow((ds[i]->fields[curr_var] - landmark[curr_var]),2);
+					a += pow((ds[i]->fields[curr_var] - landmark[curr_var]),2);
   		}
-			a = exp(-a/(2 * s)); 
+					a = exp(-a/(2 * s)); 
 			
 			if(a >= t)
 			kernels[i] = 1;
 			else
 			kernels[i] = 0;
 
-}  
+		}  
 
 		
 		if(accumulate(kernels.begin(), kernels.end(), 0) >= (int)min_pts)
 		{
   	
-		return true;
+					return true;
 		}
 		t = t - 0.05;
 		}
