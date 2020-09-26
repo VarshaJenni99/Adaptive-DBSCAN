@@ -166,48 +166,20 @@ poss := dataset([{0.1},{0.15},{0.2},{0.25},{0.30},{0.35},{0.4},{0.45},{0.5},{0.5
 
 
 
-rs1 T1(RS1 L,integer c) := TRANSFORM
+rs T1(RS1 L,integer c) := TRANSFORM
 mod := ADBSCAN.ADBSCAN(l.x).Fit(dsNF);
 test := Analysis.Clustering.SampleSilhouetteScore(dsNF,mod);
 num := max(mod,mod.label);
 self.x := if(num > 1, ave(test,value), 0);
+self.y := c;
 END;
 
 
 MySet1 := project(poss,T1(LEFT,counter));
 
-unsigned find( STREAMED DATASET(rs1) ds) := EMBED(C++)
-
-    #include<iostream>
-    #include<bits/stdc++.h>
-
-    using namespace std;
-		#body
-		vector<double> scores;
-		for(;;)
-		{
-			const byte *next = (const byte *)ds->nextRow();
-			if(!next)
-      break;
-			const byte *p = next;
-			
-       double f = *((double*)p); p += sizeof(double);
-			 p += sizeof(double);
-			 
-			 scores.push_back(f);
-       
-			 rtlReleaseRow(next);	
-			
-				}
-				
-				uint32_t maxElementIndex = max_element(scores.begin(),scores.end()) - scores.begin();
-
-		return maxElementIndex + 1;
-endembed;
-
-ind := find(MySet1);
+maximum := max(MySet1, MySet1.x);
+ind := MySet1(x = maximum)[1].y;
 thre := poss[ind].x ;
-
 
 mod := ADBSCAN.ADBSCAN(thre).Fit(dsNF);
 
