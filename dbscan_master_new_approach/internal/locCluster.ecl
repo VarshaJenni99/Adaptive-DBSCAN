@@ -1,15 +1,15 @@
 ﻿/*##############################################################################
 ## HPCC SYSTEMS software Copyright (C) 2019 HPCC Systems.  All rights reserved.
 ############################################################################## */
-IMPORT $.^.DBSCAN_Types AS Files;
+IMPORT $.^.ADBSCAN_Types AS Files;
 IMPORT Std.system.Thorlib;
 
 EXPORT locCluster := MODULE
   /**
     * Return the partially clustered result of performing DBSCAN on points present only
-    * in one node. locDBSCAN takes as input a dataset distributed such that all points
+    * in one node. locADBSCAN takes as input a dataset distributed such that all points
     * are available in all nodes, but only whole set of points to form neighbors, resulting
-    * in 'local' and 'remote' neighbors. This partial DBSCAN clustering is returned, per node.
+    * in 'local' and 'remote' neighbors. This partial ADBSCAN clustering is returned, per node.
     *
     * One of the following distance functions may be used to compute distances between points:
     * "euclidean","cosine","minkowski","manhattan","haversine","chebyshev"
@@ -18,13 +18,12 @@ EXPORT locCluster := MODULE
     * to the function when used
     *
     * @param dsIn          Distributed dataset for clustering in DATASET(l_stage2) format
-    * @param eps           The epsilon value for DBSCAN clustering
-    * @param minPts        The minimum number of points to form a cluster
+    * @param threshold     minimum density
     * @param distance_func String naming the distance function to use
     * @param params        Set of additional parameters needed for distance functions
     * @param localNode     Parameter that indicates which node the code is running on
     */
-    EXPORT STREAMED DATASET(Files.l_stage3) locDBSCAN(STREAMED DATASET(Files.l_stage2) dsIn,
+    EXPORT STREAMED DATASET(Files.l_stage3) locADBSCAN(STREAMED DATASET(Files.l_stage2) dsIn,
 																											REAL threshold,
                                                       STRING distance_func = 'euclidean',
                                                       SET OF REAL8 params = [],
@@ -200,9 +199,9 @@ EXPORT locCluster := MODULE
 	 return false;
 }
 
-    //function: dbscan returns a dataset with parentid's in each local node.
+    //function: adbscan returns a dataset with parentid's in each local node.
     //input: Vector ds, distance eps and number of min points.
-    void dbscan(vector<node*> ds, double threshold) {
+    void adbscan(vector<node*> ds, double threshold) {
 				uint64_t minpts;
 				uint64_t d = ds[0]->fields.size();				
 				minpts = 0.1 * ds.size();
@@ -339,7 +338,7 @@ EXPORT locCluster := MODULE
                 results.push_back(&dataset[i]);
             }
 
-            dbscan(results,threshold);
+            adbscan(results,threshold);
         }
 
         //Returning  row by row via Interface
@@ -393,6 +392,6 @@ EXPORT locCluster := MODULE
     transform(distanceFunc.begin(),distanceFunc.end(),distanceFunc.begin(),::tolower);
 
     return new ResultStream(_resultAllocator, dsin,threshold,localnode);
-  ENDEMBED;//end locDBSCAN
+  ENDEMBED;//end locADBSCAN
 
 END;

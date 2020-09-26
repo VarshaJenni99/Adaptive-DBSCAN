@@ -1,13 +1,13 @@
 ﻿IMPORT ML_Core;
 IMPORT ML_Core.Analysis;
 IMPORT ML_Core.Types AS Types;
-IMPORT $.^ AS DBSCAN;
-IMPORT $.datasets.zelnik AS compound_data;
+IMPORT $.^ AS ADBSCAN;
+IMPORT $.datasets.adap AS compound_data;
 IMPORT $.datasets;
 
 rs :={Types.t_FieldReal x, Types.t_FieldReal y};
 rs1 :={Real x};
-actual := $.datasets._2d_2c_no4_actual;
+actual := $.datasets.adap_actual;
 dimension := 2;
 Records := compound_data.ds;
 layout := compound_data.layout;
@@ -160,7 +160,7 @@ poss := dataset([{0.1},{0.15},{0.2},{0.25},{0.30},{0.35},{0.4},{0.45},{0.5},{0.5
 
 
 rs1 T1(RS1 L,integer c) := TRANSFORM
-mod := DBSCAN.DBSCAN(l.x).Fit(dsNF);
+mod := ADBSCAN.ADBSCAN(l.x).Fit(dsNF);
 test := Analysis.Clustering.SampleSilhouetteScore(dsNF,mod);
 num := max(mod,mod.label);
 self.x := if(num > 1, ave(test,value), 0);
@@ -203,11 +203,11 @@ ind := find(MySet1);
 thre := poss[ind].x ;
 
 
-mod := DBSCAN.DBSCAN(thre).Fit(dsNF);
+mod := ADBSCAN.ADBSCAN(thre).Fit(dsNF);
 
 
-NumberOfClusters := DBSCAN.DBSCAN().Num_Clusters(mod);
-NumberOfOutliers := DBSCAN.DBSCAN().Num_Outliers(mod);
+NumberOfClusters := ADBSCAN.ADBSCAN().Num_Clusters(mod);
+NumberOfOutliers := ADBSCAN.ADBSCAN().Num_Outliers(mod);
 test := Analysis.Clustering.SilhouetteScore(dsNF,mod);
 test1 := Analysis.Clustering.ARI(mod, actual);
 
